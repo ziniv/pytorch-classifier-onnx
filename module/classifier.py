@@ -10,7 +10,7 @@ from pytorch_lightning.plugins import DDPPlugin
 from datasets import *
 
 # for pytorch lightning test
-# we are gonna make classification module which to customize or evaluate backbones.
+# todo : create classification pytorch lightning module which to customize or evaluate backbones.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
