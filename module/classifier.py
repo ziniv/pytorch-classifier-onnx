@@ -46,5 +46,54 @@ class ResNetClassifier(pl.LightningModule):
         linear_size = list(self.resnet_model.children())[-1].in_features
         self.resnet_model.fc = nn.Linear(linear_size, num_classes)
         
+    
+    def forward(self, x):
+        return self.resnet_model(x)
+    
+    def configure_optimizers(self):
+        return self.optimizer(self.parameters(), lr=self.lr)
+    
+    def _step(self, batch):
+        x, y = batch
+        preds = self(x)
+
+        if self.num_classes == 1:
+            preds = preds.flatten()
+            y = y.float()
+
+        loss = self.loss_fn(preds, y)
+        acc = self.acc(preds, y)
+        return loss, acc
+
+    def training_step(self, batch, batch_idx):
+        loss, acc = self._step(batch)
+        # perform logging
+        self.log(
+            "train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
+        )
+        self.log(
+            "train_acc", acc, on_step=True, on_epoch=True, prog_bar=True, logger=True
+        )
+        return loss
+
+    def val_dataloader(self):
+        return self._dataloader(self.val_path)
+
+    def validation_step(self, batch, batch_idx):
+        loss, acc = self._step(batch)
+        # perform logging
+        self.log("val_loss", loss, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_acc", acc, on_epoch=True, prog_bar=True, logger=True)
+
+    def test_dataloader(self):
+        return self._dataloader(self.test_path)
+
+    def test_step(self, batch, batch_idx):
+        loss, acc = self._step(batch)
+        # perform logging
+        self.log("test_loss", loss, on_step=True, prog_bar=True, logger=True)
+        self.log("test_acc", acc, on_step=True, prog_bar=True, logger=True)
+        
+    
         # based on https://github.com/Stevellen/ResNet-Lightning/blob/master/resnet_classifier.py
 
