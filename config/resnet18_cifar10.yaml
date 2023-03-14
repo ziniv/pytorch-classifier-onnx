@@ -1,0 +1,35 @@
+# if model_transfer is True, 
+# returns a model pre-trained on ImageNet
+# if model_tune_fc_only is True, 
+# only tune  the fully-connected layers
+# and other layer's requires_grad is False
+model : 'resnet18'
+model_transfer : False
+model_tune_fc_only : True
+
+dataset_name : 'cifar10'
+classes : 10
+input_size : (56, 56)
+data_path : '../../datasets/cifar-10-batches-py/'
+save_dir : './saved'
+gpus : 0
+
+workers : 4
+epochs : 200
+batch_size : 16
+
+save_freq : 5
+
+# commonly used optimizer functions : sgd, adam
+# and default options are 
+#    lr, momentum, nesterov, weight_decay
+optimizer : 'sgd'
+optimizer_options:
+  lr : 1e-3
+  momentum : 0.9 
+  nesterov : True
+  weight_decay : 1e-5
+
+trainer_options:
+  check_val_every_n_epoch : 5
+  precision : 32
