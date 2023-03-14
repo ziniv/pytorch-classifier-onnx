@@ -8,10 +8,11 @@ import albumentations
 from albumentations.pytorch.transforms import ToTensorV2
 
 class TinyImageNetDataset(Dataset):
-    def __init__(self, path, transforms, is_train):
+    def __init__(self, path, transforms, is_train, input_size=(224, 224)):
         super(TinyImageNetDataset, self).__init__()
         self.transforms = transforms
         self.is_train = is_train
+        self.input_size = input_size
         with open(path + '/wnids.txt', 'r') as f:
             self.label_list = f.read().splitlines()
 
@@ -36,7 +37,7 @@ class TinyImageNetDataset(Dataset):
 
     def __getitem__(self, index):
         img_file = self.data[index]
-        img = cv2.imread(img_file)
+        img = cv2.resize(cv2.imread(img_file), self.input_size)
         if self.is_train:
             label = self.train_list[img_file]
         else:
@@ -45,17 +46,19 @@ class TinyImageNetDataset(Dataset):
         return transformed, label
 
 class TinyImageNet(pl.LightningDataModule):
-    def __init__(self, path, workers, transforms, batch_size=None):
+    def __init__(self, path, workers, transforms, input_size=(224, 224), batch_size=None):
         super(TinyImageNet, self).__init__()
         self.path = path
         self.train_transforms = transforms
         self.batch_size = batch_size
         self.workers = workers
+        self.input_size = input_size
     
     def train_dataloader(self):
         return DataLoader(TinyImageNetDataset(self.path,
                                               transforms=self.train_transforms,
-                                              is_train=True),
+                                              is_train=True,
+                                              input_size=self.input_size),
                           batch_size=self.batch_size,
                           num_workers=self.workers,
                           persistent_workers=self.workers > 0,
@@ -63,9 +66,14 @@ class TinyImageNet(pl.LightningDataModule):
                           )
 
     def val_dataloader(self):
+        val_transform = albumentations.Compose([
+            albumentations.Normalize(0, 1), 
+            ToTensorV2()
+        ])
         return DataLoader(TinyImageNetDataset(self.path,
-                                              transforms=albumentations.Compose([ToTensorV2()]),
-                                              is_train=False),
+                                              transforms=val_transform,
+                                              is_train=False,
+                                              input_size=self.input_size),
                           batch_size=self.batch_size,
                           num_workers=self.workers,
                           persistent_workers=self.workers > 0,

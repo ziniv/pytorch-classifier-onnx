@@ -8,7 +8,7 @@ import albumentations
 from albumentations.pytorch.transforms import ToTensorV2
 
 class Cifar10Dataset(Dataset):
-    def __init__(self, data_path, transforms, is_train) -> None:
+    def __init__(self, data_path, transforms, is_train, input_size=(32, 32)) -> None:
         super(Cifar10Dataset, self).__init__()
         
         meta_datapath = os.path.join(data_path, 'batches.meta')
@@ -17,6 +17,7 @@ class Cifar10Dataset(Dataset):
         
         self.transforms = transforms
         self.is_train = is_train
+        self.input_size = input_size
         self.classes = []
         with open(meta_datapath, 'rb') as meta_fo:
             data = pickle.load(meta_fo, encoding='latin1')
@@ -56,23 +57,23 @@ class Cifar10Dataset(Dataset):
 
 
 class Cifar10(pl.LightningDataModule):
-    def __init__(self, data_path, batch_size, workers, transforms) -> None:
+    def __init__(self, data_path, batch_size, workers, transforms, input_size=(32, 32)) -> None:
         super(Cifar10, self).__init__()
         self.data_path = data_path
         self.transforms = transforms
         self.batch_size = batch_size
         self.workers = workers
-    
+        self.input_size = input_size
     
     def prepare_data(self):
         pass
-    
     
     def train_dataloader(self):
         return DataLoader(Cifar10Dataset(
                                         data_path=self.data_path,
                                         transforms=self.transforms,
-                                        is_train=True),
+                                        is_train=True,
+                                        input_size=self.input_size),
                           batch_size=self.batch_size,
                           num_workers=self.workers,
                           persistent_workers=self.workers > 0,
@@ -80,10 +81,15 @@ class Cifar10(pl.LightningDataModule):
                           )
     
     def val_dataloader(self):
+        val_transform = albumentations.Compose([
+            albumentations.Normalize(0, 1), 
+            ToTensorV2()
+        ])
         return DataLoader(Cifar10Dataset(
                                         data_path=self.data_path,
-                                        transforms=albumentations.Compose([ToTensorV2()]),
-                                        is_train=False),
+                                        transforms=val_transform,
+                                        is_train=False,
+                                        input_size=self.input_size),
                           batch_size=self.batch_size,
                           num_workers=self.workers,
                           persistent_workers=self.workers > 0,
